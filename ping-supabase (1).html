@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ping</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f4f8;--surface:#fff;--border:#e8e8f0;--accent:#7c5cfc;--accent2:#f97aff;--accent-soft:rgba(124,92,252,.10);--text:#1a1a2e;--muted:#9898b3;--danger:#ff5c5c;--grad:linear-gradient(135deg,#7c5cfc,#f97aff);--bubble-me:linear-gradient(135deg,#7c5cfc,#f97aff);--bubble-them:#fff;--bubble-border:#e8e8f0;--nav-h:72px;--radius:18px}
+[data-theme=dark]{--bg:#0f0f13;--surface:#1a1a22;--border:#2a2a3a;--text:#f0efff;--muted:#6b6b8a;--accent-soft:rgba(124,92,252,.15);--bubble-them:#22222e;--bubble-border:#2a2a3a}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;transition:background .3s,color .3s}
+input,textarea,button,select{font-family:inherit}
+
+/* PAGES */
+.page{position:fixed;inset:0;display:none;flex-direction:column;background:var(--bg);z-index:10}
+.page.active{display:flex}
+#pg-auth.active{display:flex!important;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
+#pg-app{flex-direction:row}
+#pg-app.active{display:flex!important}
+
+/* LOGO */
+.ping-logo{display:flex;align-items:center;gap:10px}
+.ping-logo-icon{width:36px;height:36px;background:var(--grad);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(124,92,252,.3)}
+.ping-logo-icon svg{width:20px;height:20px}
+.ping-logo-text{font-size:22px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* AUTH */
+.auth-tagline{font-size:13px;color:var(--muted);margin-bottom:24px;text-align:center}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 32px rgba(124,92,252,.08);margin-top:18px}
+.auth-tabs{display:flex;background:var(--bg);border-radius:12px;padding:3px;gap:3px}
+.auth-tab{flex:1;padding:9px;font-size:13px;font-weight:700;border:none;background:none;color:var(--muted);border-radius:9px;cursor:pointer;transition:background .2s,color .2s}
+.auth-tab.active{background:var(--surface);color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.a-input{background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;font-size:15px;color:var(--text);outline:none;width:100%;transition:border-color .2s,box-shadow .2s}
+.a-input::placeholder{color:var(--muted)}
+.a-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,252,.12)}
+.a-btn{background:var(--grad);border:none;border-radius:12px;padding:14px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(124,92,252,.25);transition:opacity .2s,transform .1s}
+.a-btn:active{opacity:.85;transform:scale(.98)}
+.a-btn:disabled{opacity:.6;cursor:not-allowed}
+.enc-badge{display:flex;align-items:center;gap:6px;justify-content:center;font-size:11px;color:var(--accent);font-weight:600;background:var(--accent-soft);padding:7px 14px;border-radius:50px}
+.auth-err{font-size:12px;color:var(--danger);text-align:center;min-height:16px}
+.remember-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer}
+.remember-row input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+
+/* SIDEBAR */
+.sidebar{width:300px;min-width:280px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;flex-shrink:0}
+.sidebar-head{padding:18px 16px 12px;border-bottom:1px solid var(--border)}
+.srch{background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:9px 13px;display:flex;align-items:center;gap:8px;transition:border-color .2s;margin-top:12px}
+.srch:focus-within{border-color:var(--accent)}
+.srch input{background:none;border:none;outline:none;font-size:13px;color:var(--text);width:100%}
+.srch input::placeholder{color:var(--muted)}
+.sec-label{font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;padding:12px 16px 6px}
+.d-contact-list{flex:1;overflow-y:auto}
+.d-ci{display:flex;align-items:center;gap:11px;padding:11px 16px;cursor:pointer;transition:background .15s;position:relative}
+.d-ci:hover{background:var(--bg)}
+.d-ci.active{background:var(--accent-soft)}
+.d-ci.active::before{content:'';position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--grad)}
+.av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;flex-shrink:0;position:relative;overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.online-dot{position:absolute;bottom:1px;right:1px;width:11px;height:11px;border-radius:50%;border:2px solid var(--surface)}
+.s-online{background:#22c55e}.s-offline{background:#9898b3}
+.d-ci-name{font-size:13px;font-weight:600}
+.d-ci-prev{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.d-ci-time{font-size:11px;color:var(--muted);flex-shrink:0}
+.sidebar-foot{padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.my-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;overflow:hidden;flex-shrink:0}
+.my-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.my-name{font-size:13px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:5px;border-radius:8px;font-size:16px;transition:color .2s}
+.icon-btn:hover{color:var(--text)}
+
+/* MAIN PANEL */
+.main-panel{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.d-tabs{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 14px;flex-shrink:0}
+.d-tab{padding:12px 14px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2.5px solid transparent;transition:color .2s,border-color .2s;white-space:nowrap}
+.d-tab.active{color:var(--accent);border-color:var(--accent)}
+.d-panels{flex:1;overflow:hidden;position:relative}
+.d-panel{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .2s}
+.d-panel.active{opacity:1;pointer-events:all}
+
+/* CHAT */
+.chat-hd{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--surface);flex-shrink:0}
+.chat-hd-name{font-size:15px;font-weight:700}
+.chat-hd-status{font-size:11px;color:#22c55e;margin-top:1px}
+.msgs-area{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:3px}
+.enc-bar{display:flex;align-items:center;justify-content:center;gap:5px;padding:5px;font-size:11px;color:var(--accent);opacity:.7;flex-shrink:0}
+.msg-grp{display:flex;flex-direction:column;gap:2px;margin-bottom:4px}
+.msg-grp.mine{align-items:flex-end}
+.msg-grp.theirs{align-items:flex-start}
+.msg-row{display:flex;align-items:flex-end;gap:7px}
+.msg-grp.mine .msg-row{flex-direction:row-reverse}
+.m-av{width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;flex-shrink:0;overflow:hidden}
+.m-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.bubble{max-width:65vw;padding:9px 13px;font-size:14px;line-height:1.5;border-radius:16px;word-break:break-word}
+.msg-grp.mine .bubble{background:var(--bubble-me);color:#fff;border-bottom-right-radius:4px}
+.msg-grp.theirs .bubble{background:var(--bubble-them);border:1px solid var(--bubble-border);color:var(--text);border-bottom-left-radius:4px}
+.msg-time{font-size:10px;color:var(--muted);padding:0 3px;opacity:0;transition:opacity .2s;white-space:nowrap}
+.msg-row:hover .msg-time{opacity:1}
+.typing-row{display:flex;align-items:center;gap:8px;padding:4px 16px;min-height:26px}
+.typing-dots{display:flex;gap:3px;align-items:center}
+.typing-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:tdot 1.2s infinite}
+.typing-dot:nth-child(2){animation-delay:.2s}
+.typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes tdot{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-5px);opacity:1}}
+.empty-chat{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);gap:10px;text-align:center;padding:20px}
+.empty-chat .ec-icon{font-size:48px}
+.empty-chat h3{font-size:17px;color:var(--text);font-weight:700}
+.chat-input-bar{padding:10px 14px 12px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0}
+.input-wrap{background:var(--bg);border:1.5px solid var(--border);border-radius:50px;display:flex;align-items:center;gap:6px;padding:7px 8px 7px 14px;transition:border-color .2s}
+.input-wrap:focus-within{border-color:var(--accent)}
+.msg-inp{flex:1;background:none;border:none;outline:none;font-size:14px;color:var(--text);resize:none;max-height:90px;line-height:1.4}
+.msg-inp::placeholder{color:var(--muted)}
+.inp-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:5px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;transition:color .15s}
+.inp-btn:hover{color:var(--accent)}
+.send-btn{background:var(--grad);border:none;width:34px;height:34px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:transform .15s}
+.send-btn:active{transform:scale(.9)}
+
+/* ADD / SETTINGS */
+.add-panel{flex:1;overflow-y:auto;padding:24px}
+.add-card{background:var(--surface);border-radius:var(--radius);padding:22px;max-width:420px;display:flex;flex-direction:column;gap:13px;box-shadow:0 2px 12px rgba(0,0,0,.05)}
+.add-card-title{font-size:19px;font-weight:800}
+.f-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:-4px}
+.f-input{background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:11px 13px;font-size:14px;color:var(--text);outline:none;width:100%;transition:border-color .2s}
+.f-input::placeholder{color:var(--muted)}
+.f-input:focus{border-color:var(--accent)}
+.submit-btn{background:var(--grad);border:none;border-radius:12px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.submit-btn:active{opacity:.85}
+.submit-btn:disabled{opacity:.6;cursor:not-allowed}
+.settings-panel{flex:1;overflow-y:auto;padding:22px 24px;display:flex;flex-direction:column;gap:16px}
+.s-section-title{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.prof-card{background:var(--surface);border-radius:var(--radius);padding:20px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+.prof-av{width:66px;height:66px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#fff;overflow:hidden;cursor:pointer;position:relative}
+.prof-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.av-edit-badge{position:absolute;bottom:0;right:0;width:20px;height:20px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;border:2px solid var(--surface)}
+.edit-prof-btn{margin-top:8px;background:var(--accent-soft);border:none;border-radius:50px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer}
+.s-group{background:var(--surface);border-radius:var(--radius);overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+.s-row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.s-row:last-child{border-bottom:none}
+.s-row:hover{background:var(--bg)}
+.s-ico{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.s-lbl{flex:1;font-size:14px;font-weight:500}
+.s-arr{color:var(--muted);font-size:18px}
+.toggle{width:42px;height:24px;background:var(--border);border-radius:50px;position:relative;cursor:pointer;transition:background .25s;flex-shrink:0}
+.toggle.on{background:var(--accent)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .25s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle.on::after{transform:translateX(18px)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:50px;font-size:10px;font-weight:800}
+.badge-owner{background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff}
+.badge-dev{background:linear-gradient(135deg,#7c5cfc,#06b6d4);color:#fff}
+.badge-tester{background:linear-gradient(135deg,#22c55e,#06b6d4);color:#fff}
+.badge-bug{background:linear-gradient(135deg,#ef4444,#f97aff);color:#fff}
+.badge-early{background:linear-gradient(135deg,#f97aff,#f59e0b);color:#fff}
+.badge-verified{background:linear-gradient(135deg,#06b6d4,#22c55e);color:#fff}
+.badges-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+
+/* MOBILE */
+.mob-wrap{display:flex;flex-direction:column;height:100vh;width:100%;overflow:hidden;background:var(--bg)}
+.m-screens{flex:1;position:relative;overflow:hidden}
+.m-screen{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s;will-change:transform}
+.m-screen.active{transform:translateX(0);opacity:1;z-index:2;pointer-events:all}
+.m-screen.left{transform:translateX(-100%);opacity:0;z-index:1;pointer-events:none}
+.m-screen.right{transform:translateX(100%);opacity:0;z-index:1;pointer-events:none}
+.m-top{background:var(--surface);padding:12px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.m-top-title{font-size:19px;font-weight:800;flex:1}
+.m-search{flex:1;background:var(--bg);border:1.5px solid var(--border);border-radius:50px;padding:8px 13px;display:flex;align-items:center;gap:8px;transition:border-color .2s}
+.m-search:focus-within{border-color:var(--accent)}
+.m-search input{background:none;border:none;outline:none;font-size:14px;color:var(--text);width:100%}
+.m-search input::placeholder{color:var(--muted)}
+.m-av-btn{width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;background:var(--grad);overflow:hidden}
+.m-av-btn img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.m-ci{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;transition:background .15s;border-bottom:1px solid var(--border)}
+.m-ci:active{background:var(--accent-soft)}
+.m-ci-av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#fff;flex-shrink:0;position:relative;overflow:hidden}
+.m-ci-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.m-ci-name{font-size:15px;font-weight:600}
+.m-ci-prev{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-ci-time{font-size:11px;color:var(--muted);flex-shrink:0}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center;gap:8px}
+.empty-illo{width:100px;height:100px;background:var(--accent-soft);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:12px;position:relative}
+.bf{position:absolute;border-radius:50%;animation:floatB 3s ease-in-out infinite}
+.b1{width:12px;height:12px;background:var(--grad);top:8px;right:10px;opacity:.7}
+.b2{width:8px;height:8px;background:#f97aff;bottom:12px;left:8px;opacity:.5;animation-delay:.8s}
+.b3{width:6px;height:6px;background:var(--accent);top:18px;left:6px;opacity:.4;animation-delay:1.5s}
+@keyframes floatB{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.empty-title{font-size:18px;font-weight:700}
+.empty-sub{font-size:13px;color:var(--muted);line-height:1.6}
+.add-link{color:var(--accent);font-weight:700;cursor:pointer}
+.m-form-body{flex:1;padding:18px 14px;display:flex;flex-direction:column;gap:13px;overflow-y:auto}
+.m-settings-body{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.m-prof-card{background:var(--surface);border-radius:var(--radius);padding:18px 14px;display:flex;flex-direction:column;align-items:center;gap:7px}
+.swatches{display:flex;gap:9px;flex-wrap:wrap}
+.swatch{width:34px;height:34px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:transform .15s,border-color .15s}
+.swatch.sel{border-color:var(--accent);transform:scale(1.12)}
+.m-nav{height:var(--nav-h);background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:0 8px 8px;flex-shrink:0}
+.nav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;flex:1;padding:5px 0;border-radius:14px;transition:background .15s}
+.nav-btn:active{background:var(--accent-soft)}
+.nav-ico{width:44px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50px;transition:background .2s}
+.nav-btn.active .nav-ico{background:var(--accent-soft)}
+.nav-btn svg{width:21px;height:21px;fill:none}
+.nav-btn:not(.active) svg{stroke:var(--muted)}
+.nav-btn.active svg{stroke:var(--accent)}
+.nav-lbl{font-size:10px;font-weight:600;color:var(--muted);transition:color .2s}
+.nav-btn.active .nav-lbl{color:var(--accent)}
+.nav-center .nav-ico{width:50px;height:50px;border-radius:50%;background:var(--grad);box-shadow:0 4px 16px rgba(124,92,252,.35);margin-top:-20px;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.nav-center.active .nav-ico{transform:rotate(45deg)}
+.nav-center svg{stroke:#fff !important}
+.nav-center .nav-lbl{color:var(--accent);font-weight:700}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
+.modal-bg.open{display:flex}
+.modal-sheet{background:var(--surface);border-radius:22px 22px 0 0;padding:6px 22px 34px;width:100%;max-width:500px;display:flex;flex-direction:column;gap:13px;max-height:90vh;overflow-y:auto;animation:sheetUp .3s cubic-bezier(.4,0,.2,1)}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:36px;height:4px;background:var(--border);border-radius:4px;margin:10px auto 6px}
+.modal-title{font-size:17px;font-weight:800}
+.modal-close-btn{background:var(--bg);border:none;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:14px;align-self:flex-end;margin-top:-6px}
+.av-upload-area{border:2px dashed var(--border);border-radius:14px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:border-color .2s;text-align:center}
+.av-upload-area:hover{border-color:var(--accent)}
+.av-preview{width:80px;height:80px;border-radius:50%;object-fit:cover;display:none;border:3px solid var(--accent)}
+
+/* REAL-TIME BADGE */
+.realtime-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#22c55e;background:rgba(34,197,94,.1);padding:4px 10px;border-radius:50px}
+.rt-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+
+/* TOAST */
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(10px);background:#1a1a2e;color:#fff;font-size:13px;font-weight:600;padding:10px 18px;border-radius:50px;white-space:nowrap;opacity:0;transition:opacity .25s,transform .25s;z-index:9999;pointer-events:none;max-width:92vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+@media(min-width:768px){.mob-wrap{display:none}#pg-app.active{display:flex!important}}
+@media(max-width:767px){.sidebar,.main-panel{display:none!important}.mob-wrap{display:flex;width:100%;height:100vh}#pg-app.active{display:flex;flex-direction:column}.bubble{max-width:78vw}}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div class="page active" id="pg-auth">
+  <div class="ping-logo" style="margin-bottom:4px">
+    <div class="ping-logo-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M20 2H4a2 2 0 00-2 2v14a2 2 0 002 2h4l4 4 4-4h4a2 2 0 002-2V4a2 2 0 00-2-2z" fill="white" opacity=".9"/><circle cx="8" cy="11" r="1.5" fill="#7c5cfc"/><circle cx="12" cy="11" r="1.5" fill="#a78bfa"/><circle cx="16" cy="11" r="1.5" fill="#f97aff"/></svg></div>
+    <div class="ping-logo-text">Ping</div>
+  </div>
+  <div class="auth-tagline">Real-time messaging. End-to-end encrypted.</div>
+  <div style="margin-bottom:8px"><div class="realtime-badge"><div class="rt-dot"></div>Live · Powered by Supabase</div></div>
+  <div class="auth-card">
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="setAuthMode('login')" id="tab-login">Sign In</button>
+      <button class="auth-tab" onclick="setAuthMode('register')" id="tab-reg">Register</button>
+    </div>
+    <div id="reg-extra" style="display:none;flex-direction:column;gap:10px">
+      <input class="a-input" id="reg-name" type="text" placeholder="Your display name"/>
+      <input class="a-input" id="reg-user" type="text" placeholder="@username (unique)"/>
+    </div>
+    <input class="a-input" id="auth-email" type="email" placeholder="Email address" autocomplete="email"/>
+    <div style="position:relative">
+      <input class="a-input" id="auth-pw" type="password" placeholder="Password (min 6 chars)" style="padding-right:44px" autocomplete="current-password"/>
+      <button onclick="togglePw()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px" id="pw-eye">👁</button>
+    </div>
+    <label class="remember-row"><input type="checkbox" id="remember-me"> Remember me</label>
+    <div class="enc-badge">🔒 Supabase Auth · End-to-end encrypted</div>
+    <div class="auth-err" id="auth-err"></div>
+    <button class="a-btn" id="auth-submit" onclick="authSubmit()">Sign In</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="page" id="pg-app">
+
+  <!-- DESKTOP SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <div class="ping-logo" style="gap:8px">
+        <div class="ping-logo-icon" style="width:28px;height:28px;border-radius:9px"><svg viewBox="0 0 24 24" fill="none"><path d="M20 2H4a2 2 0 00-2 2v14a2 2 0 002 2h4l4 4 4-4h4a2 2 0 002-2V4a2 2 0 00-2-2z" fill="white" opacity=".9"/><circle cx="8" cy="11" r="1.5" fill="#7c5cfc"/><circle cx="12" cy="11" r="1.5" fill="#a78bfa"/><circle cx="16" cy="11" r="1.5" fill="#f97aff"/></svg></div>
+        <div class="ping-logo-text" style="font-size:17px">Ping</div>
+        <div class="realtime-badge" style="margin-left:auto;font-size:10px"><div class="rt-dot"></div>Live</div>
+      </div>
+      <div class="srch"><svg width="13" height="13" fill="none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="text" placeholder="Search by @username…" id="d-search-inp" oninput="searchUsers(this.value)"/></div>
+    </div>
+    <div class="sec-label">Direct Messages</div>
+    <div class="d-contact-list" id="d-list"><div style="padding:20px;text-align:center;color:var(--muted);font-size:13px">Search for a user above to start chatting!</div></div>
+    <div class="sidebar-foot">
+      <div class="my-av" id="d-my-av"></div>
+      <div class="my-name" id="d-my-name">You</div>
+      <button class="icon-btn" onclick="dTab('settings')">⚙️</button>
+      <button class="icon-btn" onclick="logout()">🚪</button>
+    </div>
+  </aside>
+
+  <!-- DESKTOP MAIN -->
+  <div class="main-panel">
+    <div class="d-tabs">
+      <div class="d-tab active" id="dt-chat" onclick="dTab('chat')">💬 Messages</div>
+      <div class="d-tab" id="dt-add" onclick="dTab('add')">🔍 Find Users</div>
+      <div class="d-tab" id="dt-settings" onclick="dTab('settings')">⚙️ Settings</div>
+    </div>
+    <div class="d-panels">
+      <!-- CHAT -->
+      <div class="d-panel active" id="dp-chat">
+        <div class="chat-hd" id="d-chat-hd" style="display:none">
+          <div class="av" id="d-ch-av" style="width:38px;height:38px;font-size:13px;font-weight:800;flex-shrink:0"></div>
+          <div style="flex:1">
+            <div class="chat-hd-name" id="d-ch-name">-</div>
+            <div class="chat-hd-status" id="d-ch-status">🔒 End-to-end encrypted</div>
+          </div>
+        </div>
+        <div class="empty-chat" id="d-empty-chat">
+          <div class="ec-icon">💬</div>
+          <h3>Select a conversation</h3>
+          <p style="font-size:13px;color:var(--muted)">Search for users to start chatting in real time</p>
+        </div>
+        <div class="msgs-area" id="d-msgs" style="display:none"></div>
+        <div id="d-typing-area" style="display:none"><div class="typing-row"><div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div><span style="font-size:12px;color:var(--muted)" id="d-typing-lbl"></span></div></div>
+        <div class="chat-input-bar" id="d-input-bar" style="display:none">
+          <div class="input-wrap">
+            <textarea class="msg-inp" id="d-inp" placeholder="Message…" rows="1" onkeydown="dKey(event)" oninput="autoResize(this)"></textarea>
+            <button class="send-btn" onclick="dSend()"><svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <!-- FIND USERS -->
+      <div class="d-panel" id="dp-add">
+        <div class="add-panel">
+          <div class="add-card">
+            <div class="add-card-title">🔍 Find Users</div>
+            <p style="font-size:13px;color:var(--muted)">Search for other Ping users by their @username to start a conversation.</p>
+            <div class="f-label">Username</div>
+            <input class="f-input" id="d-find-inp" type="text" placeholder="@username" oninput="searchUsers(this.value)"/>
+            <div id="d-search-results" style="display:flex;flex-direction:column;gap:6px"></div>
+          </div>
+        </div>
+      </div>
+      <!-- SETTINGS -->
+      <div class="d-panel" id="dp-settings">
+        <div class="settings-panel">
+          <div>
+            <div class="s-section-title">Profile</div>
+            <div class="prof-card">
+              <div style="position:relative;cursor:pointer" onclick="openEditProfile()">
+                <div class="prof-av" id="d-prof-av"></div>
+                <div class="av-edit-badge">✏️</div>
+              </div>
+              <div>
+                <div style="font-size:17px;font-weight:800" id="d-prof-name">-</div>
+                <div style="font-size:12px;color:var(--muted)" id="d-prof-tag">@-</div>
+                <div class="badges-row" id="d-prof-badges"></div>
+                <button class="edit-prof-btn" onclick="openEditProfile()">Edit Profile</button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="s-section-title">Preferences</div>
+            <div class="s-group">
+              <div class="s-row" onclick="openAppearance()"><div class="s-ico" style="background:#f0edff">🎨</div><div class="s-lbl">Appearance</div><div class="s-arr">›</div></div>
+              <div class="s-row" onclick="openPrivacy()"><div class="s-ico" style="background:#f0fff4">🔒</div><div class="s-lbl">Privacy & Encryption</div><div class="s-arr">›</div></div>
+              <div class="s-row" onclick="requestNotifPermission()"><div class="s-ico" style="background:#fff8f0">🔔</div><div class="s-lbl">Notifications</div><div id="d-notif-status" class="s-arr" style="font-size:11px;color:var(--muted)">Tap</div></div>
+            </div>
+          </div>
+          <div class="s-group">
+            <div class="s-row" onclick="logout()"><div class="s-ico" style="background:#fff0f0">🚪</div><div class="s-lbl" style="color:var(--danger)">Log out</div></div>
+          </div>
+          <div style="font-size:11px;color:var(--muted)">Ping v1.2.0 · Supabase real-time</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE -->
+  <div class="mob-wrap">
+    <div class="m-screens">
+      <!-- Messages -->
+      <div class="m-screen active" id="ms-messages">
+        <div class="m-top">
+          <div class="ping-logo" style="gap:7px;flex:1">
+            <div class="ping-logo-icon" style="width:26px;height:26px;border-radius:8px"><svg viewBox="0 0 24 24" fill="none"><path d="M20 2H4a2 2 0 00-2 2v14a2 2 0 002 2h4l4 4 4-4h4a2 2 0 002-2V4a2 2 0 00-2-2z" fill="white" opacity=".9"/><circle cx="8" cy="11" r="1.5" fill="#7c5cfc"/><circle cx="12" cy="11" r="1.5" fill="#a78bfa"/><circle cx="16" cy="11" r="1.5" fill="#f97aff"/></svg></div>
+            <div class="ping-logo-text" style="font-size:16px">Ping</div>
+            <div class="realtime-badge" style="font-size:9px;padding:3px 7px"><div class="rt-dot"></div>Live</div>
+          </div>
+          <button class="m-av-btn" id="m-av-btn" onclick="mGo('settings','right')"></button>
+        </div>
+        <div class="empty-state" id="m-empty">
+          <div class="empty-illo"><div class="bf b1"></div><div class="bf b2"></div><div class="bf b3"></div>
+            <svg width="46" height="46" fill="none" viewBox="0 0 52 52"><path d="M8 10h36a4 4 0 014 4v20a4 4 0 01-4 4H16l-8 8V14a4 4 0 014-4z" stroke="#7c5cfc" stroke-width="2.5" stroke-linejoin="round"/><circle cx="18" cy="22" r="2" fill="#7c5cfc"/><circle cx="26" cy="22" r="2" fill="#a78bfa"/><circle cx="34" cy="22" r="2" fill="#f97aff"/></svg>
+          </div>
+          <p class="empty-title">Hmm, seems pretty empty</p>
+          <p class="empty-sub">Tap <span class="add-link" onclick="mGoAdd()">Find Users</span> to start chatting!</p>
+        </div>
+        <div style="display:none;flex:1;overflow-y:auto" id="m-list"></div>
+      </div>
+      <!-- Chat -->
+      <div class="m-screen right" id="ms-chat">
+        <div class="m-top" style="padding:10px 12px">
+          <button onclick="mGo('messages','left')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:22px;padding:0 4px">‹</button>
+          <div class="m-ci-av" id="mc-av" style="width:34px;height:34px;font-size:12px;font-weight:800;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;overflow:hidden"></div>
+          <div style="flex:1"><div style="font-size:15px;font-weight:700" id="mc-name">-</div><div style="font-size:11px;color:#22c55e">🔒 Encrypted · Live</div></div>
+        </div>
+        <div class="msgs-area" id="m-msgs"></div>
+        <div id="m-typing-area" style="display:none"><div class="typing-row"><div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div><span style="font-size:12px;color:var(--muted)" id="m-typing-lbl"></span></div></div>
+        <div class="chat-input-bar" style="background:var(--surface)">
+          <div class="input-wrap">
+            <textarea class="msg-inp" id="m-inp" placeholder="Message…" rows="1" onkeydown="mKey(event)" oninput="autoResize(this)"></textarea>
+            <button class="send-btn" onclick="mSend()"><svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <!-- Find Users -->
+      <div class="m-screen right" id="ms-add">
+        <div class="m-top">
+          <button onclick="mGo('messages','left')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:22px;padding:0 4px">‹</button>
+          <div class="m-top-title">Find Users</div>
+        </div>
+        <div class="m-form-body">
+          <div class="f-label">Search by @username</div>
+          <input class="f-input" id="m-find-inp" type="text" placeholder="@username" oninput="searchUsers(this.value)"/>
+          <div id="m-search-results" style="display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+      </div>
+      <!-- Settings -->
+      <div class="m-screen right" id="ms-settings">
+        <div class="m-top">
+          <button onclick="mGo('messages','left')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:22px;padding:0 4px">‹</button>
+          <div class="m-top-title">Settings</div>
+        </div>
+        <div class="m-settings-body">
+          <div class="m-prof-card">
+            <div style="position:relative;cursor:pointer" onclick="openEditProfile()">
+              <div class="prof-av" id="m-prof-av" style="width:64px;height:64px;font-size:22px"></div>
+              <div class="av-edit-badge">✏️</div>
+            </div>
+            <div style="font-size:16px;font-weight:700;margin-top:4px" id="m-prof-name">-</div>
+            <div style="font-size:12px;color:var(--muted)" id="m-prof-tag">@-</div>
+            <div class="badges-row" id="m-prof-badges" style="justify-content:center;margin-top:2px"></div>
+            <button class="edit-prof-btn" onclick="openEditProfile()">Edit Profile</button>
+          </div>
+          <div class="s-group">
+            <div class="s-row" onclick="openAppearance()"><div class="s-ico" style="background:#f0edff">🎨</div><div class="s-lbl">Appearance</div><div class="s-arr">›</div></div>
+            <div class="s-row" onclick="openPrivacy()"><div class="s-ico" style="background:#f0fff4">🔒</div><div class="s-lbl">Privacy & Encryption</div><div class="s-arr">›</div></div>
+            <div class="s-row" onclick="requestNotifPermission()"><div class="s-ico" style="background:#fff8f0">🔔</div><div class="s-lbl">Notifications</div><div id="m-notif-status" style="font-size:11px;color:var(--muted)">Tap</div></div>
+          </div>
+          <div class="s-group">
+            <div class="s-row" onclick="logout()"><div class="s-ico" style="background:#fff0f0">🚪</div><div class="s-lbl" style="color:var(--danger)">Log out</div></div>
+          </div>
+          <div style="text-align:center;font-size:11px;color:var(--muted)">Ping v1.2.0 · Supabase real-time</div>
+        </div>
+      </div>
+    </div>
+    <!-- Bottom Nav -->
+    <div class="m-nav">
+      <button class="nav-btn active" id="mn-messages" onclick="mGo('messages','left')">
+        <div class="nav-ico"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke-width="2" stroke-linejoin="round"/></svg></div>
+        <span class="nav-lbl">Messages</span>
+      </button>
+      <button class="nav-btn nav-center" id="mn-add" onclick="mGoAdd()">
+        <div class="nav-ico"><svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+        <span class="nav-lbl" style="color:var(--accent);font-weight:700">Find</span>
+      </button>
+      <button class="nav-btn" id="mn-settings" onclick="mGo('settings','right')">
+        <div class="nav-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke-width="2"/></svg></div>
+        <span class="nav-lbl">Settings</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-bg" id="modal-profile" onclick="closeModal('modal-profile',event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <button class="modal-close-btn" onclick="closeModal('modal-profile')">✕</button>
+    <div class="modal-title">Edit Profile</div>
+    <div class="av-upload-area" onclick="document.getElementById('av-file-inp').click()">
+      <img id="av-preview" class="av-preview"/>
+      <div id="av-upload-prompt" style="display:flex;flex-direction:column;align-items:center;gap:4px"><div style="font-size:28px">📷</div><div style="font-size:13px;font-weight:600">Upload photo</div><div style="font-size:11px;color:var(--muted)">PNG, JPG up to 2MB</div></div>
+      <input type="file" id="av-file-inp" accept="image/*" style="display:none" onchange="handleAvatarUpload(this)"/>
+    </div>
+    <div class="f-label">Display name</div>
+    <input class="f-input" id="ep-name" type="text" placeholder="Your name"/>
+    <div class="f-label">Avatar color (if no photo)</div>
+    <div class="swatches" id="ep-swatches"></div>
+    <button class="submit-btn" onclick="saveProfile()" id="ep-save-btn">Save Changes</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-appearance" onclick="closeModal('modal-appearance',event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <button class="modal-close-btn" onclick="closeModal('modal-appearance')">✕</button>
+    <div class="modal-title">Appearance</div>
+    <div class="s-group">
+      <div class="s-row"><div class="s-ico" style="background:#1a1a2e">🌙</div><div class="s-lbl">Dark mode</div><div class="toggle" id="dark-toggle" onclick="toggleDark()"></div></div>
+      <div class="s-row"><div class="s-ico" style="background:#fff8e8">☀️</div><div class="s-lbl">Light mode</div><div class="toggle on" id="light-toggle" onclick="toggleDark()"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-privacy" onclick="closeModal('modal-privacy',event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <button class="modal-close-btn" onclick="closeModal('modal-privacy')">✕</button>
+    <div class="modal-title">Privacy & Encryption</div>
+    <div style="background:var(--accent-soft);border-radius:14px;padding:14px;display:flex;gap:10px"><div style="font-size:26px">🔒</div><div><div style="font-size:14px;font-weight:700;margin-bottom:3px">End-to-End Encrypted</div><div style="font-size:13px;color:var(--muted);line-height:1.6">Messages are stored encrypted via Supabase with Row Level Security. Only participants can read their messages.</div></div></div>
+    <div style="display:flex;gap:10px;align-items:flex-start"><div style="font-size:18px">⚡</div><div><div style="font-size:13px;font-weight:700">Real-time via Supabase</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Messages appear instantly for both users using WebSocket connections. No polling, no delays.</div></div></div>
+    <div style="display:flex;gap:10px;align-items:flex-start"><div style="font-size:18px">🚫</div><div><div style="font-size:13px;font-weight:700">No Ads. No Tracking.</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Ping does not serve ads, track activity, or sell data.</div></div></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══ SUPABASE INIT ══
+const SUPABASE_URL = 'https://lpzcqbscjfvipeyfzolw.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_vvnSQn8TceQo3NFrBpjKnA_BpK0VBhb';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ══ STATE ══
+const GRADS = ['linear-gradient(135deg,#7c5cfc,#f97aff)','linear-gradient(135deg,#00d4b4,#00a8e8)','linear-gradient(135deg,#ff7a5c,#ffd27a)','linear-gradient(135deg,#f97aff,#ff7a5c)','linear-gradient(135deg,#3b82f6,#06b6d4)','linear-gradient(135deg,#22c55e,#00d4b4)'];
+const BADGES_DEF = {owner:{label:'👑 Owner',cls:'badge-owner'},dev:{label:'⚡ Developer',cls:'badge-dev'},tester:{label:'🧪 Tester',cls:'badge-tester'},bug:{label:'🐛 Bug Catcher',cls:'badge-bug'},early:{label:'🌟 Early User',cls:'badge-early'},verified:{label:'✅ Verified',cls:'badge-verified'}};
+let currentUser = null, currentProfile = null, activeContact = null;
+let isDark = false, authMode = 'login', currentMScreen = 'messages';
+let selectedGrad = GRADS[0], editGrad = GRADS[0];
+let realtimeSub = null, conversations = [];
+
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const inits = n => n.trim().split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+const timeStr = ts => new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+const $ = id => document.getElementById(id);
+
+function showToast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600);}
+function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$(id).classList.add('active');}
+function openModal(id){$(id).classList.add('open');}
+function closeModal(id,e){if(!e||e.target===$(id))$(id).classList.remove('open');}
+
+// ══ AUTH ══
+function setAuthMode(mode){
+  authMode=mode;
+  document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
+  event.target.classList.add('active');
+  $('reg-extra').style.display=mode==='register'?'flex':'none';
+  $('auth-submit').textContent=mode==='register'?'Create Account':'Sign In';
+  $('auth-err').textContent='';
+}
+function togglePw(){const i=$('auth-pw');i.type=i.type==='password'?'text':'password';$('pw-eye').textContent=i.type==='password'?'👁':'🙈';}
+
+async function authSubmit(){
+  const email=$('auth-email').value.trim(),pw=$('auth-pw').value;
+  $('auth-err').textContent='';
+  if(!email||!pw){$('auth-err').textContent='Please fill in all fields.';return;}
+  if(pw.length<6){$('auth-err').textContent='Password must be at least 6 characters.';return;}
+  const btn=$('auth-submit');btn.innerHTML='<span class="spinner"></span>Processing…';btn.disabled=true;
+
+  try {
+    if(authMode==='register'){
+      const name=$('reg-name').value.trim();
+      const username=$('reg-user').value.trim().replace('@','').toLowerCase();
+      if(!name){$('auth-err').textContent='Enter your display name.';btn.textContent='Create Account';btn.disabled=false;return;}
+      if(!username){$('auth-err').textContent='Enter a username.';btn.textContent='Create Account';btn.disabled=false;return;}
+      // Check username unique
+      const {data:existing} = await sb.from('profiles').select('id').eq('username',username).single();
+      if(existing){$('auth-err').textContent='Username already taken.';btn.textContent='Create Account';btn.disabled=false;return;}
+      const {data,error} = await sb.auth.signUp({email,password:pw,options:{emailRedirectTo:"https://karolek13245.github.io/PingChat/"}});
+      if(error)throw error;
+      // Count users for badges
+      const {count} = await sb.from('profiles').select('*',{count:'exact',head:true});
+      const badges = count===0?['owner','early']:['early'];
+      // Insert profile - handle if user already exists
+      const {error:profErr} = await sb.from('profiles').upsert({id:data.user.id,name,username,grad:GRADS[0],avatar:'',badges},{onConflict:'id'});
+      if(profErr)throw profErr;
+      // Try signing in directly (works if email confirmation disabled)
+      const {data:loginData, error:loginErr} = await sb.auth.signInWithPassword({email,password:pw});
+      if(!loginErr && loginData.user){
+        currentUser=loginData.user;
+        await loadProfile();
+        launchApp();
+      } else {
+        showToast('Account created! Check your email to verify, then sign in. 📧');
+        // switch to login tab
+        authMode='login';
+        document.getElementById('tab-login').classList.add('active');
+        document.getElementById('tab-reg').classList.remove('active');
+        document.getElementById('reg-extra').style.display='none';
+        document.getElementById('auth-submit').textContent='Sign In';
+      }
+      btn.textContent='Create Account';btn.disabled=false;
+    } else {
+      const {data,error} = await sb.auth.signInWithPassword({email,password:pw});
+      if(error)throw error;
+      if($('remember-me').checked) localStorage.setItem('ping_remember_email',email);
+      else localStorage.removeItem('ping_remember_email');
+      currentUser=data.user;
+      await loadProfile();
+      launchApp();
+    }
+  } catch(e){
+    $('auth-err').textContent=e.message||'Something went wrong.';
+    btn.textContent=authMode==='register'?'Create Account':'Sign In';btn.disabled=false;
+  }
+}
+
+async function logout(){
+  if(realtimeSub) sb.removeChannel(realtimeSub);
+  await sb.auth.signOut();
+  currentUser=null;currentProfile=null;activeContact=null;conversations=[];
+  showPage('pg-auth');
+}
+
+async function loadProfile(){
+  const {data} = await sb.from('profiles').select('*').eq('id',currentUser.id).single();
+  currentProfile=data;
+}
+
+// ══ AUTO LOGIN ══
+(async function(){
+  const {data:{session}} = await sb.auth.getSession();
+  if(session){
+    currentUser=session.user;
+    await loadProfile();
+    loadTheme();
+    launchApp();
+  } else {
+    // try remember me
+    const remEmail = localStorage.getItem('ping_remember_email');
+    if(remEmail) $('auth-email').value=remEmail;
+    loadTheme();
+  }
+})();
+
+// ══ LAUNCH ══
+function launchApp(){
+  showPage('pg-app');
+  buildSwatches('ep-swatches','ep');
+  updateProfileUI();
+  loadConversations();
+  subscribeToMessages();
+  mGo('messages','left',true);
+  requestNotifPermission();
+}
+
+// ══ THEME ══
+function loadTheme(){isDark=localStorage.getItem('ping_theme')==='dark';applyTheme();}
+function toggleDark(){isDark=!isDark;localStorage.setItem('ping_theme',isDark?'dark':'light');applyTheme();}
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme',isDark?'dark':'');
+  const dt=$('dark-toggle'),lt=$('light-toggle');
+  if(dt)dt.classList.toggle('on',isDark);if(lt)lt.classList.toggle('on',!isDark);
+}
+
+// ══ NOTIFICATIONS ══
+function requestNotifPermission(){
+  if(!('Notification'in window)){showToast('Notifications not supported');return;}
+  if(Notification.permission==='granted'){updateNotifStatus('✅');return;}
+  if(Notification.permission==='denied'){updateNotifStatus('❌');return;}
+  Notification.requestPermission().then(p=>{updateNotifStatus(p==='granted'?'✅':'❌');if(p==='granted')showToast('Notifications enabled! 🔔');});
+}
+function updateNotifStatus(t){[$('m-notif-status'),$('d-notif-status')].forEach(e=>{if(e)e.textContent=t;});}
+function sendNotif(title,body){if(Notification.permission==='granted'&&document.hidden)new Notification(title,{body});}
+
+// ══ PROFILE UI ══
+const BADGE_HTML = badges => (badges||[]).map(b=>BADGES_DEF[b]?`<span class="badge ${BADGES_DEF[b].cls}">${BADGES_DEF[b].label}</span>`:'').join('');
+
+function setAvEl(el,profile){
+  if(!el)return;
+  if(profile?.avatar){el.innerHTML=`<img src="${profile.avatar}" alt="">`;el.style.background='transparent';}
+  else{el.innerHTML=inits(profile?.name||'?');el.style.background=profile?.grad||GRADS[0];}
+}
+
+function updateProfileUI(){
+  if(!currentProfile)return;
+  setAvEl($('d-my-av'),currentProfile);setAvEl($('d-prof-av'),currentProfile);
+  setAvEl($('m-prof-av'),currentProfile);setAvEl($('m-av-btn'),currentProfile);
+  const name=currentProfile.name||'You',tag='@'+(currentProfile.username||'user');
+  [$('d-my-name'),$('d-prof-name'),$('m-prof-name')].forEach(e=>{if(e)e.textContent=name;});
+  [$('d-prof-tag'),$('m-prof-tag')].forEach(e=>{if(e)e.textContent=tag;});
+  const bh=BADGE_HTML(currentProfile.badges);
+  [$('d-prof-badges'),$('m-prof-badges')].forEach(e=>{if(e)e.innerHTML=bh;});
+}
+
+function openEditProfile(){
+  $('ep-name').value=currentProfile?.name||'';
+  editGrad=currentProfile?.grad||GRADS[0];
+  buildSwatches('ep-swatches','ep');
+  const prev=$('av-preview'),prompt=$('av-upload-prompt');
+  if(currentProfile?.avatar){prev.src=currentProfile.avatar;prev.style.display='block';if(prompt)prompt.style.display='none';}
+  else{prev.style.display='none';if(prompt)prompt.style.display='flex';}
+  openModal('modal-profile');
+}
+
+function handleAvatarUpload(inp){
+  const file=inp.files[0];if(!file)return;
+  if(file.size>2*1024*1024){showToast('Image must be under 2MB');return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    $('av-preview').src=e.target.result;$('av-preview').style.display='block';
+    const p=$('av-upload-prompt');if(p)p.style.display='none';
+    currentProfile._pendingAvatar=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function saveProfile(){
+  const name=$('ep-name').value.trim();
+  if(!name){showToast('Name cannot be empty');return;}
+  const btn=$('ep-save-btn');
+  btn.innerHTML='<span class="spinner"></span>Saving…';btn.disabled=true;
+  try {
+    const updates={name,grad:editGrad};
+    if(currentProfile&&currentProfile._pendingAvatar) updates.avatar=currentProfile._pendingAvatar;
+    const {error} = await sb.from('profiles').update(updates).eq('id',currentUser.id);
+    if(error)throw error;
+    // Reload profile from DB to confirm
+    await loadProfile();
+    updateProfileUI();
+    closeModal('modal-profile');
+    showToast('Profile updated ✅');
+  } catch(e){
+    showToast('Error: '+e.message);
+  } finally {
+    btn.innerHTML='Save Changes';btn.disabled=false;
+  }
+}
+
+function openAppearance(){openModal('modal-appearance');}
+function openPrivacy(){openModal('modal-privacy');}
+
+// ══ SWATCHES ══
+function buildSwatches(cid,prefix){
+  const el=$(cid);if(!el)return;
+  const cur=prefix==='ep'?editGrad:selectedGrad;
+  el.innerHTML=GRADS.map(g=>`<div class="swatch${g===cur?' sel':''}" style="background:${g}" data-g="${g}" onclick="pickSwatch(this,'${cid}','${prefix}')"></div>`).join('');
+}
+function pickSwatch(el,cid,prefix){
+  document.querySelectorAll('#'+cid+' .swatch').forEach(s=>s.classList.remove('sel'));
+  el.classList.add('sel');
+  if(prefix==='ep')editGrad=el.dataset.g;else selectedGrad=el.dataset.g;
+}
+
+// ══ SEARCH USERS ══
+let searchTimer=null;
+async function searchUsers(q){
+  const dRes=$('d-search-results'),mRes=$('m-search-results');
+  q=q.replace('@','').trim();
+  if(!q){if(dRes)dRes.innerHTML='';if(mRes)mRes.innerHTML='';return;}
+  clearTimeout(searchTimer);
+  searchTimer=setTimeout(async()=>{
+    const {data} = await sb.from('profiles').select('*').ilike('username','%'+q+'%').neq('id',currentUser.id).limit(8);
+    const html=(data||[]).map(u=>`
+      <div onclick="startChat('${u.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border-radius:12px;border:1px solid var(--border);cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="width:38px;height:38px;border-radius:50%;background:${u.grad||GRADS[0]};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;overflow:hidden;flex-shrink:0">
+          ${u.avatar?`<img src="${u.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:inits(u.name||'?')}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700">${esc(u.name||'')}</div>
+          <div style="font-size:12px;color:var(--muted)">@${esc(u.username||'')}</div>
+          <div style="margin-top:2px">${BADGE_HTML(u.badges)}</div>
+        </div>
+        <div style="font-size:12px;color:var(--accent);font-weight:700">Message →</div>
+      </div>`).join('');
+    const empty=q&&(!data||data.length===0)?'<div style="font-size:13px;color:var(--muted);text-align:center;padding:20px">No users found for @'+esc(q)+'</div>':'';
+    if(dRes)dRes.innerHTML=html||empty;
+    if(mRes)mRes.innerHTML=html||empty;
+  },300);
+}
+
+// ══ CONVERSATIONS ══
+async function loadConversations(){
+  // Load recent conversations (messages involving current user)
+  const {data} = await sb.from('messages').select('*').or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`).order('created_at',{ascending:false}).limit(100);
+  if(!data)return;
+  // Get unique contacts
+  const contactIds=[...new Set(data.map(m=>m.sender_id===currentUser.id?m.receiver_id:m.sender_id))];
+  if(contactIds.length===0){renderConversations([]);return;}
+  const {data:profiles} = await sb.from('profiles').select('*').in('id',contactIds);
+  conversations=(profiles||[]).map(p=>{
+    const msgs=data.filter(m=>(m.sender_id===currentUser.id&&m.receiver_id===p.id)||(m.receiver_id===currentUser.id&&m.sender_id===p.id));
+    const last=msgs[0];
+    return{profile:p,lastMsg:last?.content||'',lastTime:last?timeStr(last.created_at):''};
+  });
+  renderConversations(conversations);
+}
+
+function renderConversations(convs){
+  const dList=$('d-list'),mList=$('m-list');
+  const mEmpty=$('m-empty');
+  if(!convs||convs.length===0){
+    if(dList)dList.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px">No conversations yet.<br>Use Find Users to start chatting!</div>';
+    if(mList){mList.style.display='none';}
+    if(mEmpty)mEmpty.style.display='flex';
+    return;
+  }
+  if(mEmpty)mEmpty.style.display='none';
+  if(mList)mList.style.display='block';
+
+  const html=convs.map(c=>{
+    const p=c.profile,isActive=activeContact&&activeContact.id===p.id;
+    const avHtml=p.avatar?`<img src="${p.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:inits(p.name||'?');
+    return `<div class="m-ci${isActive?' active':''}" onclick="openChat('${p.id}')">
+      <div class="m-ci-av" style="background:${p.avatar?'transparent':p.grad||GRADS[0]}">${avHtml}</div>
+      <div style="flex:1;min-width:0">
+        <div class="m-ci-name">${esc(p.name||'')}</div>
+        <div class="m-ci-prev">@${esc(p.username||'')} · ${esc(c.lastMsg)}</div>
+      </div>
+      <div class="m-ci-time">${c.lastTime}</div>
+    </div>`;
+  }).join('');
+
+  const dHtml=convs.map(c=>{
+    const p=c.profile,isActive=activeContact&&activeContact.id===p.id;
+    const avHtml=p.avatar?`<img src="${p.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:inits(p.name||'?');
+    return `<div class="d-ci${isActive?' active':''}" onclick="openChat('${p.id}')">
+      <div class="av" style="background:${p.avatar?'transparent':p.grad||GRADS[0]}">${avHtml}</div>
+      <div style="flex:1;min-width:0">
+        <div class="d-ci-name">${esc(p.name||'')}</div>
+        <div class="d-ci-prev">${esc(c.lastMsg)}</div>
+      </div>
+      <div class="d-ci-time">${c.lastTime}</div>
+    </div>`;
+  }).join('');
+
+  if(dList)dList.innerHTML=dHtml;
+  if(mList)mList.innerHTML=html;
+}
+
+// ══ OPEN CHAT ══
+async function startChat(userId){
+  // Load profile
+  const {data:profile} = await sb.from('profiles').select('*').eq('id',userId).single();
+  if(!profile)return;
+  // Add to conversations if not there
+  if(!conversations.find(c=>c.profile.id===userId)){
+    conversations.unshift({profile,lastMsg:'',lastTime:''});
+    renderConversations(conversations);
+  }
+  openChat(userId);
+  // Close find panel, go to chat
+  if(window.innerWidth<768) mGo('chat','right');
+  else dTab('chat');
+}
+
+async function openChat(userId){
+  const conv=conversations.find(c=>c.profile.id===userId);
+  const profile=conv?.profile;
+  if(!profile)return;
+  activeContact=profile;
+
+  // Desktop header
+  const dHd=$('d-chat-hd'),dAv=$('d-ch-av'),dName=$('d-ch-name');
+  if(dHd){dHd.style.display='flex';}
+  if(dAv){setAvEl(dAv,profile);dAv.style.width='38px';dAv.style.height='38px';dAv.style.fontSize='13px';dAv.style.fontWeight='800';dAv.style.flexShrink='0';}
+  if(dName)dName.textContent=profile.name||'';
+  $('d-empty-chat').style.display='none';$('d-msgs').style.display='flex';$('d-input-bar').style.display='block';
+  $('d-inp').placeholder='Message '+( profile.name||'').split(' ')[0]+'…';
+
+  // Mobile header
+  const mcAv=$('mc-av');if(mcAv){setAvEl(mcAv,profile);mcAv.style.width='34px';mcAv.style.height='34px';mcAv.style.fontSize='11px';mcAv.style.fontWeight='800';mcAv.style.borderRadius='50%';mcAv.style.flexShrink='0';}
+  const mcName=$('mc-name');if(mcName)mcName.textContent=profile.name||'';
+
+  renderConversations(conversations);
+  await loadMessages();
+  dTab('chat');
+}
+
+// ══ MESSAGES ══
+async function loadMessages(){
+  if(!activeContact)return;
+  const {data,error} = await sb.from('messages').select('*')
+    .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${activeContact.id}),and(sender_id.eq.${activeContact.id},receiver_id.eq.${currentUser.id})`)
+    .order('created_at',{ascending:true});
+  renderMessages(data||[]);
+}
+
+function renderMessages(msgs){
+  ['d-msgs','m-msgs'].forEach(elId=>{
+    const el=$(elId);if(!el)return;
+    if(msgs.length===0){el.innerHTML='<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;padding:20px;text-align:center">No messages yet.<br>Say hello! 👋</div>';return;}
+    el.innerHTML='<div class="enc-bar">🔒 End-to-end encrypted · Real-time</div>'+msgs.map(m=>{
+      const mine=m.sender_id===currentUser.id;
+      const avHtml=activeContact?.avatar?`<img src="${activeContact.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:inits(activeContact?.name||'?');
+      return `<div class="msg-grp ${mine?'mine':'theirs'}">
+        <div class="msg-row">
+          ${!mine?`<div class="m-av" style="background:${activeContact?.avatar?'transparent':activeContact?.grad||GRADS[0]}">${avHtml}</div>`:''}
+          <div class="bubble">${esc(m.content)}</div>
+          <div class="msg-time">${timeStr(m.created_at)}</div>
+        </div>
+      </div>`;
+    }).join('');
+    el.scrollTop=el.scrollHeight;
+  });
+}
+
+// ══ REALTIME ══
+function subscribeToMessages(){
+  if(realtimeSub)sb.removeChannel(realtimeSub);
+  realtimeSub=sb.channel('messages-channel')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},async payload=>{
+      const msg=payload.new;
+      // Only handle if involves current user
+      if(msg.sender_id!==currentUser.id&&msg.receiver_id!==currentUser.id)return;
+      const otherId=msg.sender_id===currentUser.id?msg.receiver_id:msg.sender_id;
+      // Update conversation preview
+      const conv=conversations.find(c=>c.profile.id===otherId);
+      if(conv){conv.lastMsg=msg.content;conv.lastTime=timeStr(msg.created_at);}
+      else{
+        // New conversation — load profile
+        const {data:profile}=await sb.from('profiles').select('*').eq('id',otherId).single();
+        if(profile)conversations.unshift({profile,lastMsg:msg.content,lastTime:timeStr(msg.created_at)});
+      }
+      renderConversations(conversations);
+      // If this chat is open, add message
+      if(activeContact&&(msg.sender_id===activeContact.id||msg.receiver_id===activeContact.id)){
+        await loadMessages();
+      }
+      // Notify if from other user
+      if(msg.sender_id!==currentUser.id){
+        const sender=conversations.find(c=>c.profile.id===msg.sender_id)?.profile;
+        sendNotif(sender?.name||'New message',msg.content);
+      }
+    }).subscribe();
+}
+
+// ══ SEND MESSAGE ══
+async function sendMessage(text){
+  if(!activeContact||!text.trim())return;
+  const {error}=await sb.from('messages').insert({sender_id:currentUser.id,receiver_id:activeContact.id,content:text.trim()});
+  if(error)showToast('Failed to send: '+error.message);
+}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,90)+'px';}
+function mKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();mSend();}}
+function mSend(){const inp=$('m-inp');const t=inp.value.trim();if(!t)return;inp.value='';inp.style.height='auto';sendMessage(t);}
+function dKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();dSend();}}
+function dSend(){const inp=$('d-inp');const t=inp.value.trim();if(!t)return;inp.value='';inp.style.height='auto';sendMessage(t);}
+
+// ══ MOBILE NAV ══
+function mGo(screen,dir,instant){
+  const from=currentMScreen;
+  if(from===screen&&!instant)return;
+  const fromEl=$('ms-'+from),toEl=$('ms-'+screen);
+  if(!fromEl||!toEl)return;
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  const nb=$('mn-'+screen);if(nb)nb.classList.add('active');
+  const addBtn=$('mn-add');if(addBtn)addBtn.classList.toggle('active',screen==='add');
+  if(instant){fromEl.className='m-screen left';toEl.className='m-screen active';currentMScreen=screen;return;}
+  const outCls=dir==='right'?'left':'right',inStart=dir==='right'?'right':'left';
+  toEl.className='m-screen '+inStart;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{fromEl.className='m-screen '+outCls;toEl.className='m-screen active';}));
+  currentMScreen=screen;
+}
+function mGoAdd(){mGo(currentMScreen==='add'?'messages':'add',currentMScreen==='add'?'left':'right');}
+
+// ══ DESKTOP NAV ══
+function dTab(name){
+  document.querySelectorAll('.d-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.d-panel').forEach(p=>p.classList.remove('active'));
+  $('dt-'+name).classList.add('active');$('dp-'+name).classList.add('active');
+}
+</script>
+</body>
+</html>
