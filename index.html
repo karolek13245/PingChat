@@ -329,6 +329,48 @@ input,textarea,button,select { font-family:inherit; }
 .icon-btn { background:none; border:none; color:var(--muted); cursor:pointer; padding:4px; border-radius:8px; font-size:16px; transition:color .2s; }
 .icon-btn:hover { color:var(--text); }
 
+/* ── Updated Edit Profile modal styles ── */
+.f-input {
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 50px;
+    padding: 10px 16px;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    width: 100%;
+    transition: border-color .2s, box-shadow .2s;
+}
+.f-input::placeholder { color: var(--muted); }
+.f-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124, 92, 252, .12);
+}
+
+.submit-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 50px;
+    padding: 12px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(124, 92, 252, .3);
+    transition: opacity .2s, transform .1s, box-shadow .2s;
+}
+.submit-btn:active {
+    opacity: .85;
+    transform: scale(.98);
+}
+.submit-btn:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+.submit-btn:hover {
+    box-shadow: 0 6px 20px rgba(124, 92, 252, .4);
+}
+
 .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:200; display:none; align-items:flex-end; justify-content:center; backdrop-filter:blur(2px); }
 .modal-bg.open { display:flex; }
 .modal-sheet { background:var(--surface); border-radius:22px 22px 0 0; padding:6px 20px 30px; width:100%; max-width:500px; display:flex; flex-direction:column; gap:12px; max-height:90vh; overflow-y:auto; animation:sheetUp .3s cubic-bezier(.4,0,.2,1); }
@@ -522,7 +564,7 @@ input,textarea,button,select { font-family:inherit; }
                     </div>
                 </div>
             </div>
-            <!-- FIND USERS – desktop with description + compact search -->
+            <!-- FIND USERS -->
             <div class="d-panel" id="dp-add">
                 <div class="add-panel">
                     <div class="add-card">
@@ -631,22 +673,19 @@ input,textarea,button,select { font-family:inherit; }
                     </div>
                 </div>
             </div>
-            <!-- Find Users – mobile with description + compact search -->
+            <!-- Find Users -->
             <div class="m-screen right" id="ms-add">
                 <div class="m-top">
                     <button onclick="mGo('messages','left')" style="background:none;border:none;cursor:pointer;color:var(--accent);font-size:20px;padding:0 4px">‹</button>
                     <div class="m-top-title">Find Users</div>
                 </div>
-                <!-- description -->
                 <p style="font-size:13px;color:var(--muted);margin:8px 14px 0 14px;line-height:1.5;">
                     Search for other Ping users by their @username to start a conversation.
                 </p>
-                <!-- compact search bar -->
                 <div class="m-search" style="margin-top:8px;">
                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke="var(--muted)" stroke-width="2"/><path d="M21 21l-4.35-4.35" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"/></svg>
                     <input type="text" placeholder="Search by @username…" id="m-find-inp" oninput="searchUsersMobile(this.value)" />
                 </div>
-                <!-- results -->
                 <div id="m-search-results" style="display:flex;flex-direction:column;gap:6px;padding:8px 14px;flex:1;overflow-y:auto;"></div>
             </div>
             <!-- Settings -->
