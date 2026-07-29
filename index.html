@@ -296,6 +296,22 @@ input,textarea,button,select { font-family:inherit; }
 .msg-inp::placeholder { color:var(--muted); }
 .send-btn { background:var(--grad); border:none; width:30px; height:30px; border-radius:50%; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:transform .15s; }
 .send-btn:active { transform:scale(.9); }
+.attach-btn { background:none; border:none; width:28px; height:28px; border-radius:50%; color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:background .15s,color .15s; }
+.attach-btn:hover { background:var(--accent-soft); color:var(--accent); }
+.file-preview-bar { display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--bg); border-top:1px solid var(--border); font-size:12px; }
+.file-preview-bar .fp-icon { font-size:16px; }
+.file-preview-bar .fp-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+.file-preview-bar .fp-size { color:var(--muted); font-size:11px; }
+.file-preview-bar .fp-cancel { background:none; border:none; cursor:pointer; color:var(--muted); font-size:14px; padding:2px 6px; }
+.file-bubble { display:flex; align-items:center; gap:9px; text-decoration:none; color:inherit; min-width:140px; }
+.file-bubble-icon { font-size:22px; flex-shrink:0; }
+.file-bubble-info { display:flex; flex-direction:column; min-width:0; }
+.file-bubble-name { font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:170px; }
+.file-bubble-size { font-size:10px; opacity:.75; margin-top:1px; }
+.file-bubble-dl { font-size:13px; opacity:.7; flex-shrink:0; }
+.bubble-file { padding:8px 10px; }
+.file-bubble-img { display:block; }
+.file-bubble-img img { max-width:220px; max-height:220px; border-radius:10px; display:block; }
 
 .settings-panel { flex:1; overflow-y:auto; padding:16px 18px 20px; display:flex; flex-direction:column; gap:12px; }
 .s-section-title { font-size:10px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:4px; }
@@ -540,6 +556,7 @@ input,textarea,button,select { font-family:inherit; }
 @media (min-width: 768px) {
     .mob-wrap { display: none !important; }
     .sidebar, .main-panel { display: flex !important; }
+    #pg-app.active { flex-direction: row; }
 }
 /* Public landing page */
 #pg-landing { overflow-y:auto; background:#fcfbff; color:#171429; font-family:'Plus Jakarta Sans',sans-serif; }
@@ -724,8 +741,11 @@ input,textarea,button,select { font-family:inherit; }
                 </div>
                 <div class="msgs-area" id="d-msgs" style="display:none"></div>
                 <div id="d-typing-area" style="display:none"><div class="typing-row"><div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div><span style="font-size:11px;color:var(--muted)" id="d-typing-lbl"></span></div></div>
+                <div id="d-file-preview"></div>
                 <div class="chat-input-bar" id="d-input-bar" style="display:none;flex-shrink:0">
+                    <input type="file" id="d-file-inp" style="display:none" onchange="handleFileSelect(this,'d')" />
                     <div class="input-wrap">
+                        <button class="attach-btn" onclick="$('d-file-inp').click()" title="Attach file"><svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                         <textarea class="msg-inp" id="d-inp" placeholder="Message…" rows="1" onkeydown="dKey(event)" oninput="autoResize(this)"></textarea>
                         <button class="send-btn" onclick="dSend()"><svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                     </div>
@@ -835,8 +855,11 @@ input,textarea,button,select { font-family:inherit; }
                 </div>
                 <div class="msgs-area" id="m-msgs"></div>
                 <div id="m-typing-area" style="display:none"><div class="typing-row"><div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div><span style="font-size:11px;color:var(--muted)" id="m-typing-lbl"></span></div></div>
+                <div id="m-file-preview"></div>
                 <div class="chat-input-bar" style="background:var(--surface)">
+                    <input type="file" id="m-file-inp" style="display:none" onchange="handleFileSelect(this,'m')" />
                     <div class="input-wrap">
+                        <button class="attach-btn" onclick="$('m-file-inp').click()" title="Attach file"><svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                         <textarea class="msg-inp" id="m-inp" placeholder="Message…" rows="1" onkeydown="mKey(event)" oninput="autoResize(this)"></textarea>
                         <button class="send-btn" onclick="mSend()"><svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                     </div>
@@ -1701,6 +1724,35 @@ async function loadMessages(){
         .order('created_at',{ascending:true});
     renderMessages(data||[]);
 }
+function formatBytes(bytes){
+    if(!bytes) return '';
+    if(bytes<1024) return bytes+' B';
+    if(bytes<1024*1024) return (bytes/1024).toFixed(1)+' KB';
+    return (bytes/1024/1024).toFixed(1)+' MB';
+}
+function fileIcon(type){
+    type=type||'';
+    if(type==='application/pdf') return '📕';
+    if(type.startsWith('text/')) return '📝';
+    if(type.includes('zip')) return '🗜️';
+    if(type.includes('word')) return '📘';
+    if(type.startsWith('image/')) return '🖼️';
+    return '📄';
+}
+function bubbleInner(m){
+    if(m.file_url){
+        const isImg=(m.file_type||'').startsWith('image/');
+        if(isImg){
+            return `<a href="${m.file_url}" target="_blank" rel="noopener" class="file-bubble-img"><img src="${m.file_url}" alt="${esc(m.file_name||'image')}"></a>`;
+        }
+        return `<a href="${m.file_url}" target="_blank" rel="noopener" download="${esc(m.file_name||'')}" class="file-bubble">
+            <div class="file-bubble-icon">${fileIcon(m.file_type)}</div>
+            <div class="file-bubble-info"><div class="file-bubble-name">${esc(m.file_name||'File')}</div><div class="file-bubble-size">${formatBytes(m.file_size)}</div></div>
+            <div class="file-bubble-dl">⬇️</div>
+        </a>`;
+    }
+    return esc(m.content);
+}
 function renderMessages(msgs){
     const dEl=$('d-msgs');
     if(dEl){
@@ -1713,7 +1765,7 @@ function renderMessages(msgs){
                 return `<div class="msg-grp ${mine?'mine':'theirs'}">
                     <div class="msg-row">
                         ${!mine?`<div class="m-av" style="background:${activeContact?.avatar?'transparent':activeContact?.grad||GRADS[0]}">${avHtml}</div>`:''}
-                        <div class="bubble">${esc(m.content)}</div>
+                        <div class="bubble ${m.file_url?'bubble-file':''}">${bubbleInner(m)}</div>
                         <div class="msg-time">${timeStr(m.created_at)}</div>
                     </div>
                 </div>`;
@@ -1732,7 +1784,7 @@ function renderMessages(msgs){
                 return `<div class="msg-grp ${mine?'mine':'theirs'}">
                     <div class="msg-row">
                         ${!mine?`<div class="m-av" style="background:${activeContact?.avatar?'transparent':activeContact?.grad||GRADS[0]}">${avHtml}</div>`:''}
-                        <div class="bubble">${esc(m.content)}</div>
+                        <div class="bubble ${m.file_url?'bubble-file':''}">${bubbleInner(m)}</div>
                         <div class="msg-time">${timeStr(m.created_at)}</div>
                     </div>
                 </div>`;
@@ -1777,6 +1829,60 @@ function dKey(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); dSend();
 function dSend(){ const inp=$('d-inp'); const t=inp.value.trim(); if(!t) return; inp.value=''; inp.style.height='auto'; sendMessage(t); }
 function mKey(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); mSend(); } }
 function mSend(){ const inp=$('m-inp'); const t=inp.value.trim(); if(!t) return; inp.value=''; inp.style.height='auto'; sendMessage(t); }
+
+// ---- File sharing ----
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+let pendingFile = { d: null, m: null };
+
+function clearFilePreview(which){
+    pendingFile[which] = null;
+    const box = $(which+'-file-preview');
+    if(box) box.innerHTML = '';
+}
+
+function handleFileSelect(inp, which){
+    const file = inp.files[0];
+    inp.value = ''; // allow re-selecting the same file later
+    if(!file) return;
+    if(!activeContact){ showToast('Select a conversation first'); return; }
+    if(file.size > MAX_FILE_SIZE){ showToast('File is too large — 10MB max'); return; }
+    pendingFile[which] = file;
+    const box = $(which+'-file-preview');
+    if(box){
+        box.innerHTML = `<div class="file-preview-bar">
+            <div class="fp-icon">${fileIcon(file.type)}</div>
+            <div class="fp-name">${esc(file.name)}</div>
+            <div class="fp-size">${formatBytes(file.size)}</div>
+            <button class="fp-cancel" onclick="clearFilePreview('${which}')">✕</button>
+        </div>`;
+    }
+    // auto-send the file right away, similar to most chat apps
+    sendPendingFile(which);
+}
+
+async function sendPendingFile(which){
+    const file = pendingFile[which];
+    if(!file || !activeContact) return;
+    clearFilePreview(which);
+    try {
+        showToast('Uploading '+file.name+'…');
+        const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
+        const path = `${currentUser.id}/${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+        const { error: upErr } = await sb.storage.from('chat-files').upload(path, file, { cacheControl:'3600', upsert:false });
+        if(upErr){ console.error('Upload error:', upErr); showToast('Upload failed: '+upErr.message); return; }
+        const { data: urlData } = sb.storage.from('chat-files').getPublicUrl(path);
+        const { error } = await sb.from('messages').insert({
+            sender_id: currentUser.id,
+            receiver_id: activeContact.id,
+            content: '📎 '+file.name,
+            file_url: urlData.publicUrl,
+            file_name: file.name,
+            file_type: file.type || '',
+            file_size: file.size
+        }).select();
+        if(error){ console.error('Send file error:', error); showToast('Failed to send file: '+error.message); }
+    } catch(e){ console.error('File send exception:', e); showToast('Error uploading file: '+e.message); }
+}
 
 function mGo(screen,dir,instant){
     const from=currentMScreen;
